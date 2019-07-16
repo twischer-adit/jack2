@@ -21,6 +21,7 @@ example_programs = {
 
 example_libs = {
     'inprocess' : 'inprocess.c',
+    'inprocess_s32' : 'inprocess_s32.cpp',
     }
 
 def configure(conf):
@@ -85,9 +86,10 @@ def build(bld):
         prog.target = 'jack_rec'
 
     for example_lib, example_lib_source in list(example_libs.items()):
-        lib = bld(features = 'c cshlib')
+        lib = bld(features = 'c cxx cshlib cxxshlib')
         if not bld.env['IS_WINDOWS']:
             lib.env['cshlib_PATTERN'] = '%s.so'
+            lib.env['cxxshlib_PATTERN'] = '%s.so'
         lib.includes = os_incdir + ['../common/jack', '../common']
         lib.target = example_lib
         lib.source = example_lib_source
