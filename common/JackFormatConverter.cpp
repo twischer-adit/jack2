@@ -87,14 +87,19 @@ class IntegerJackPortConverter : public BaseJackPortConverter {
         virtual void* get(jack_nframes_t frames) {
             int32_t * aligned_ptr = GetBuffer();
             jack_default_audio_sample_t* src = (jack_default_audio_sample_t*) jack_port_get_buffer(port, frames);
+            /* error is already thrown in jack_port_get_buffer() */
+            if (src == NULL)
+                return NULL;
             from_jack ((char *)aligned_ptr, src, frames, sample_size, NULL);
             return aligned_ptr;
         }
 
         virtual void set(void* src, jack_nframes_t frames) {
             jack_default_audio_sample_t* dst = (jack_default_audio_sample_t*) jack_port_get_buffer(port, frames);
+            /* error is already thrown in jack_port_get_buffer() */
+            if (dst == NULL)
+                return;
             to_jack (dst,(char *) src, frames, sample_size);
-            return;
         }
 };
 
