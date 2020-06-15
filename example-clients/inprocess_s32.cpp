@@ -84,8 +84,12 @@ jack_initialize (jack_client_t *client, const char *load_init)
 					      JACK_DEFAULT_AUDIO_TYPE,
 					      JackPortIsOutput, 0);
 
-	pp->input_port_converter = jack_port_create_converter(input_port, typeid(int32_t), false);
-	pp->output_port_converter = jack_port_create_converter(output_port, typeid(int32_t), false);
+	pp->input_port_converter = jack_port_create_converter(input_port,
+							      typeid(int32_t),
+							      false);
+	pp->output_port_converter = jack_port_create_converter(output_port,
+							       typeid(int32_t),
+							       false);
 
 	/* join the process() cycle */
 	jack_activate (client);
@@ -130,6 +134,12 @@ jack_initialize (jack_client_t *client, const char *load_init)
 extern "C" void
 jack_finish (void *arg)
 {
-	if (arg)
-		free ((port_converter_pair_t *) arg);
+	port_converter_pair_t* pp = (port_converter_pair_t*)arg;
+
+	if (pp == NULL)
+		return;
+
+	delete pp->input_port_converter;
+	delete pp->output_port_converter;
+	free (pp);
 }
