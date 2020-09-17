@@ -1,7 +1,8 @@
-/** @file inprocess_s32.cpp
+/** @file inprocess_period.cpp
  *
  * @brief This demonstrates the basic concepts for writing a client
- * that runs within the JACK server process for s32 format.
+ * that runs within the JACK server process for period size alignment
+ * between server and client.
  *
  * For the sake of example, a port_converter_pair_t is allocated in
  * jack_initialize(), passed to inprocess() as an argument, then freed
@@ -11,7 +12,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
-#include <typeinfo>
 #include <jack/jack.h>
 #include <jack/format_converter.h>
 
@@ -21,6 +21,11 @@
  * in jack_finish().
  */
 typedef struct {
+	/* Client private structure/class should have first variable as JackFormatConverterHandle_t
+	 * This space will be used by jack format converter
+	 */
+	JackFormatConverterHandle_t* handle;
+	JackBufferConverter_t* buffer_converter;
 	JackPortConverter_t* input_port_converter;
 	JackPortConverter_t* output_port_converter;
 } port_converter_pair_t;
@@ -74,7 +79,9 @@ jack_initialize (jack_client_t *client, const char *load_init)
 	if (pp == NULL)
 		return 1;		/* heap exhausted */
 
-	jack_set_process_callback (client, inprocess, pp);
+	const uint32_t period_time = 16; /* ms */
+	pp->buffer_converter = jack_buffer_create_convert(client, inprocess, pp,
+                                                 (period_time * jack_get_sample_rate(client))/1000);
 
 	/* create a pair of ports */
 	input_port = jack_port_register (client, "input",
@@ -85,13 +92,13 @@ jack_initialize (jack_client_t *client, const char *load_init)
 					      JackPortIsOutput, 0);
 
 	pp->input_port_converter = jack_port_create_convert(input_port,
-                                                        JACK_PORT_CONV_FMT_INT32,
-                                                        false,
-                                                        NULL);
+							      JACK_PORT_CONV_FMT_INT32,
+							      false,
+							      pp->buffer_converter);
 	pp->output_port_converter = jack_port_create_convert(output_port,
-                                                         JACK_PORT_CONV_FMT_INT32,
-                                                         false,
-                                                         NULL);
+							      JACK_PORT_CONV_FMT_INT32,
+							       false,
+							       pp->buffer_converter);
 
 	/* join the process() cycle */
 	jack_activate (client);
@@ -136,11 +143,12 @@ jack_initialize (jack_client_t *client, const char *load_init)
 extern "C" void
 jack_finish (void *arg)
 {
-	port_converter_pair_t *pp = (port_converter_pair_t *)arg;
+	port_converter_pair_t* pp = (port_converter_pair_t*)(arg);
 	if (pp == NULL)
 		return;
 
 	jack_port_destroy_convert(pp->input_port_converter);
 	jack_port_destroy_convert(pp->output_port_converter);
+	jack_buffer_destroy_convert(pp->buffer_converter);
 	free (pp);
 }

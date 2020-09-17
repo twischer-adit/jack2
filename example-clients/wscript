@@ -22,6 +22,7 @@ example_programs = {
 example_libs = {
     'inprocess' : 'inprocess.c',
     'inprocess_s32' : 'inprocess_s32.cpp',
+    'inprocess_period' : 'inprocess_period.cpp',
     }
 
 def configure(conf):
